@@ -39,7 +39,7 @@ export default class ScreenShort {
   private screenShortCanvas: CanvasRenderingContext2D | undefined;
   // 文本区域dom
   private readonly textInputController: HTMLDivElement | null;
-  //  截图工具栏画笔选项dom
+  // 截图工具栏画笔选项dom
   private optionController: HTMLDivElement | null;
   private optionIcoController: HTMLDivElement | null;
   // 图形位置参数
@@ -74,6 +74,8 @@ export default class ScreenShort {
   private maxUndoNum = 15;
   // 马赛克涂抹区域大小
   private degreeOfBlur = 5;
+  // 截图容器位置信息
+  private position: { top: number; left: number } = { left: 0, top: 0 };
 
   // 文本输入框位置
   private textInputPosition: { mouseX: number; mouseY: number } = {
@@ -86,6 +88,10 @@ export default class ScreenShort {
     canvasWidth: number;
     canvasHeight: number;
     completeCallback: Function;
+    closeCallback: Function;
+    triggerCallback: Function;
+    cancelCallback: Function;
+    position: { top?: number; left?: number };
   }) {
     const plugInParameters = new PlugInParameters();
     // webrtc启用状态
@@ -98,12 +104,25 @@ export default class ScreenShort {
     // 设置回调函数
     if (
       options &&
+      Object.prototype.hasOwnProperty.call(options, "completeCallback") &&
+      Object.prototype.hasOwnProperty.call(options, "closeCallback")
+    ) {
+      // 完成与关闭回调都存在
+      new CreateDom(options.completeCallback, options.closeCallback);
+    } else if (
+      options &&
+      Object.prototype.hasOwnProperty.call(options, "closeCallback")
+    ) {
+      // 只有关闭回调函数存在
+      new CreateDom(options.completeCallback, options.closeCallback);
+    } else if (
+      options &&
       Object.prototype.hasOwnProperty.call(options, "completeCallback")
     ) {
-      // 创建dom
+      // 只有完成回调函数存在
       new CreateDom(options.completeCallback);
     } else {
-      // 创建dom
+      // 都不存在
       new CreateDom((base64: string) => {
         sessionStorage.setItem("screenShotImg", base64);
       });
@@ -116,6 +135,15 @@ export default class ScreenShort {
     ) {
       plugInParameters.setCanvasSize(options.canvasWidth, options.canvasHeight);
     }
+    // 设置截图容器的位置信息
+    if (options && Object.prototype.hasOwnProperty.call(options, "position")) {
+      if (options.position?.top != null) {
+        this.position.top = options.position?.top;
+      }
+      if (options.position?.left != null) {
+        this.position.left = options.position?.left;
+      }
+    }
     this.videoController = document.createElement("video");
     this.videoController.autoplay = true;
     this.screenShortImageController = document.createElement("canvas");
@@ -127,7 +155,7 @@ export default class ScreenShort {
     this.textInputController = this.data.getTextInputController() as HTMLDivElement | null;
     this.optionController = this.data.getOptionController() as HTMLDivElement | null;
     this.optionIcoController = this.data.getOptionIcoController() as HTMLDivElement | null;
-    this.load();
+    this.load(options.triggerCallback, options.cancelCallback);
     const screenShotContainer = document.getElementById("screenShotContainer");
     if (screenShotContainer == null) return;
     // 调整层级
@@ -135,11 +163,13 @@ export default class ScreenShort {
   }
 
   // 加载截图组件
-  private load() {
+  private load(triggerCallback: Function, cancelCallback: Function) {
     const plugInParameters = new PlugInParameters();
     const canvasSize = plugInParameters.getCanvasSize();
     // 设置截图区域canvas宽高
     this.data.setScreenShortInfo(window.innerWidth, window.innerHeight);
+    // 设置截图容器位置
+    this.data.setScreenShotPosition(this.position.left, this.position.top);
     // 设置截图图片存放容器宽高
     this.screenShortImageController.width = window.innerWidth;
     this.screenShortImageController.height = window.innerHeight;
@@ -176,40 +206,52 @@ export default class ScreenShort {
     this.data.showScreenShortPanel();
     if (!plugInParameters.getWebRtcStatus()) {
       // html2canvas截屏
-      html2canvas(document.body, {}).then(canvas => {
-        // 装载截图的dom为null则退出
-        if (this.screenShortController == null) return;
+      html2canvas(document.body, {})
+        .then(canvas => {
+          // 装载截图的dom为null则退出
+          if (this.screenShortController == null) return;
 
-        // 存放html2canvas截取的内容
-        this.screenShortImageController = canvas;
+          if (triggerCallback != null) {
+            // 获取页面元素成功，执行回调函数
+            triggerCallback({ code: 0, msg: "截图加载完成" });
+          }
 
-        // 赋值截图区域canvas画布
-        this.screenShortCanvas = context;
-        // 绘制蒙层
-        drawMasking(context);
+          // 存放html2canvas截取的内容
+          this.screenShortImageController = canvas;
 
-        // 添加监听
-        this.screenShortController?.addEventListener(
-          "mousedown",
-          this.mouseDownEvent
-        );
-        this.screenShortController?.addEventListener(
-          "mousemove",
-          this.mouseMoveEvent
-        );
-        this.screenShortController?.addEventListener(
-          "mouseup",
-          this.mouseUpEvent
-        );
-      });
+          // 赋值截图区域canvas画布
+          this.screenShortCanvas = context;
+          // 绘制蒙层
+          drawMasking(context);
+
+          // 添加监听
+          this.screenShortController?.addEventListener(
+            "mousedown",
+            this.mouseDownEvent
+          );
+          this.screenShortController?.addEventListener(
+            "mousemove",
+            this.mouseMoveEvent
+          );
+          this.screenShortController?.addEventListener(
+            "mouseup",
+            this.mouseUpEvent
+          );
+        })
+        .catch(err => {
+          if (triggerCallback != null) {
+            // 获取页面元素成功，执行回调函数
+            triggerCallback({ code: -1, msg: err });
+          }
+        });
       return;
     }
     // 截取整个屏幕
-    this.screenShot();
+    this.screenShot(cancelCallback);
   }
 
   // 开始捕捉屏幕
-  private startCapture = async () => {
+  private startCapture = async (cancelCallback: Function) => {
     let captureStream = null;
 
     try {
@@ -220,6 +262,12 @@ export default class ScreenShort {
       // 将MediaStream输出至video标签
       this.videoController.srcObject = captureStream;
     } catch (err) {
+      if (cancelCallback != null) {
+        cancelCallback({
+          code: -1,
+          msg: "浏览器不支持webrtc或者用户未授权"
+        });
+      }
       // 销毁截图组件
       this.data.destroyDOM();
       throw `浏览器不支持webrtc或者用户未授权( ${err} )`;
@@ -238,9 +286,9 @@ export default class ScreenShort {
   };
 
   // 截屏
-  private screenShot = () => {
+  private screenShot = (cancelCallback: Function) => {
     // 开始捕捉屏幕
-    this.startCapture().then(() => {
+    this.startCapture(cancelCallback).then(() => {
       setTimeout(() => {
         // 获取截图区域canvas容器画布
         const context = this.screenShortController?.getContext("2d");
@@ -344,9 +392,9 @@ export default class ScreenShort {
         // 保存绘制记录
         this.addHistory();
       }
-      // 计算文本框显示位置
-      const textMouseX = mouseX - 15;
-      const textMouseY = mouseY - 15;
+      // 计算文本框显示位置, 需要加上截图容器的位置信息
+      const textMouseX = mouseX - 15 + this.position.left;
+      const textMouseY = mouseY - 15 + this.position.top;
       // 修改文本区域位置
       this.textInputController.style.left = textMouseX + "px";
       this.textInputController.style.top = textMouseY + "px";
@@ -524,7 +572,10 @@ export default class ScreenShort {
           this.toolController.offsetWidth
         );
         // 显示并设置截图工具栏位置
-        this.data.setToolInfo(toolLocation.mouseX, toolLocation.mouseY);
+        this.data.setToolInfo(
+          toolLocation.mouseX + this.position.left,
+          toolLocation.mouseY + this.position.top
+        );
       }
     }
   };
