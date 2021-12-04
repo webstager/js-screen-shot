@@ -7,6 +7,7 @@ import {
   drawCutOutBoxReturnType,
   movePositionType,
   positionInfoType,
+  screenShotType,
   zoomCutOutBoxReturnType
 } from "@/lib/type/ComponentType";
 import { drawMasking } from "@/lib/split-methods/DrawMasking";
@@ -23,6 +24,7 @@ import { saveBorderArrInfo } from "@/lib/common-methords/SaveBorderArrInfo";
 import { calculateToolLocation } from "@/lib/split-methods/CalculateToolLocation";
 import html2canvas from "html2canvas";
 import PlugInParameters from "@/lib/main-entrance/PlugInParameters";
+import { getDrawBoundaryStatus } from "@/lib/split-methods/BoundaryJudgment";
 
 export default class ScreenShort {
   // 当前实例的响应式data数据
@@ -71,6 +73,8 @@ export default class ScreenShort {
   private clickFlag = false;
   // 鼠标拖动状态
   private dragFlag = false;
+  // 单击截取屏启用状态
+  private clickCutFullScreen = false;
   // 上一个裁剪框坐标信息
   private drawGraphPrevX = 0;
   private drawGraphPrevY = 0;
@@ -87,17 +91,7 @@ export default class ScreenShort {
     mouseX: 0,
     mouseY: 0
   };
-  constructor(options: {
-    enableWebRtc: boolean;
-    level: number;
-    canvasWidth: number;
-    canvasHeight: number;
-    completeCallback: Function;
-    closeCallback: Function;
-    triggerCallback: Function;
-    cancelCallback: Function;
-    position: { top?: number; left?: number };
-  }) {
+  constructor(options: screenShotType) {
     const plugInParameters = new PlugInParameters();
     // webrtc启用状态
     if (
@@ -106,32 +100,15 @@ export default class ScreenShort {
     ) {
       plugInParameters.setWebRtcStatus(options.enableWebRtc);
     }
-    // 设置回调函数
+    // 单击截取全屏启用状态
     if (
       options &&
-      Object.prototype.hasOwnProperty.call(options, "completeCallback") &&
-      Object.prototype.hasOwnProperty.call(options, "closeCallback")
+      Object.prototype.hasOwnProperty.call(options, "clickCutFullScreen")
     ) {
-      // 完成与关闭回调都存在
-      new CreateDom(options.completeCallback, options.closeCallback);
-    } else if (
-      options &&
-      Object.prototype.hasOwnProperty.call(options, "closeCallback")
-    ) {
-      // 只有关闭回调函数存在
-      new CreateDom(options.completeCallback, options.closeCallback);
-    } else if (
-      options &&
-      Object.prototype.hasOwnProperty.call(options, "completeCallback")
-    ) {
-      // 只有完成回调函数存在
-      new CreateDom(options.completeCallback);
-    } else {
-      // 都不存在
-      new CreateDom((base64: string) => {
-        sessionStorage.setItem("screenShotImg", base64);
-      });
+      this.clickCutFullScreen = options.clickCutFullScreen;
     }
+    // 创建截图所需dom并设置回调函数
+    new CreateDom(options);
     // 读取参数中的画布宽高
     if (
       options &&
@@ -228,6 +205,8 @@ export default class ScreenShort {
 
           // 存放html2canvas截取的内容
           this.screenShortImageController = canvas;
+          // 存储屏幕截图
+          this.data.setScreenShortImageController(canvas);
 
           // 赋值截图区域canvas画布
           this.screenShortCanvas = context;
@@ -327,6 +306,10 @@ export default class ScreenShort {
             containerWidth,
             containerHeight
           );
+        // 存储屏幕截图
+        this.data.setScreenShortImageController(
+          this.screenShortImageController
+        );
         // 添加监听
         this.screenShortController?.addEventListener(
           "mousedown",
@@ -360,9 +343,6 @@ export default class ScreenShort {
       // 记录当前鼠标开始坐标
       this.drawGraphPosition.startX = mouseX;
       this.drawGraphPosition.startY = mouseY;
-    } else {
-      // 隐藏截图工具栏
-      this.data.setToolStatus(false);
     }
 
     // 当前操作的是画笔
@@ -441,24 +421,40 @@ export default class ScreenShort {
       this.screenShortCanvas == null ||
       this.screenShortController == null ||
       this.data.getToolName() == "undo"
-    )
+    ) {
       return;
+    }
 
-    // 工具栏未选择且鼠标处于按下状态时, 修改拖动状态为true
+    // 工具栏未选择且鼠标处于按下状态时
     if (!this.data.getToolClickStatus() && this.data.getDragging()) {
+      // 修改拖动状态为true;
       this.dragFlag = true;
+      // 隐藏截图工具栏
+      this.data.setToolStatus(false);
     }
     this.clickFlag = false;
-    // 获取裁剪框位置信息
+    // 获取当前绘制中的工具位置信息
     const { startX, startY, width, height } = this.drawGraphPosition;
     // 获取当前鼠标坐标
     const currentX = nonNegativeData(event.offsetX);
     const currentY = nonNegativeData(event.offsetY);
-    // 裁剪框临时宽高
+    // 绘制中工具的临时宽高
     const tempWidth = currentX - startX;
     const tempHeight = currentY - startY;
     // 工具栏绘制
     if (this.data.getToolClickStatus() && this.data.getDragging()) {
+      // 获取裁剪框位置信息
+      const cutBoxPosition = this.data.getCutOutBoxPosition();
+      // 绘制中工具的起始x、y坐标不能小于裁剪框的起始坐标
+      // 绘制中工具的起始x、y坐标不能大于裁剪框的结束标作
+      // 当前鼠标的x坐标不能小于裁剪框起始x坐标，不能大于裁剪框的结束坐标
+      // 当前鼠标的y坐标不能小于裁剪框起始y坐标，不能大于裁剪框的结束坐标
+      if (
+        !getDrawBoundaryStatus(startX, startY, cutBoxPosition) ||
+        !getDrawBoundaryStatus(currentX, currentY, cutBoxPosition)
+      )
+        return;
+
       // 当前操作的不是马赛克则显示最后一次画布绘制时的状态
       if (this.data.getToolName() != "mosaicPen") {
         this.showLastHistory();
@@ -559,8 +555,42 @@ export default class ScreenShort {
     this.data.setDragging(false);
     this.data.setDraggingTrim(false);
 
-    // 鼠标尚未拖动且工具栏未选择则不修改工具栏位置
-    if (!this.dragFlag && !this.data.getToolClickStatus()) {
+    // 截图容器判空
+    if (this.screenShortCanvas == null || this.screenShortController == null) {
+      return;
+    }
+    // 鼠标未拖动且单击截屏状态为false则不做任何操作
+    if (!this.dragFlag && !this.clickCutFullScreen) {
+      return;
+    }
+
+    // 调用者尚未拖拽生成选区
+    // 鼠标尚未拖动
+    // 单击截取屏幕状态为true
+    // 则截取整个屏幕
+    const cutBoxPosition = this.data.getCutOutBoxPosition();
+    if (
+      cutBoxPosition.width === 0 &&
+      cutBoxPosition.height === 0 &&
+      cutBoxPosition.startX === 0 &&
+      cutBoxPosition.startY === 0 &&
+      !this.dragFlag &&
+      this.clickCutFullScreen
+    ) {
+      // 设置裁剪框位置为全屏
+      this.tempGraphPosition = drawCutOutBox(
+        0,
+        0,
+        this.screenShortImageController.width,
+        this.screenShortImageController.height,
+        this.screenShortCanvas,
+        this.data.getBorderSize(),
+        this.screenShortController,
+        this.screenShortImageController
+      ) as drawCutOutBoxReturnType;
+    } else if (!this.dragFlag && !this.data.getToolClickStatus()) {
+      // 鼠标尚未拖动且工具栏未选择则不修改工具栏位置
+
       // 复原裁剪框的坐标
       this.drawGraphPosition.startX = this.drawGraphPrevX;
       this.drawGraphPosition.startY = this.drawGraphPrevY;
@@ -572,6 +602,7 @@ export default class ScreenShort {
     if (this.screenShortController == null || this.screenShortCanvas == null) {
       return;
     }
+    // 工具栏已点击
     if (this.data.getToolClickStatus()) {
       // 保存绘制记录
       this.addHistory();
@@ -651,6 +682,7 @@ export default class ScreenShort {
           this.cutOutBoxBorderArr[i].width,
           this.cutOutBoxBorderArr[i].height
         );
+        // 当前坐标点处于8个可操作点上，修改鼠标指针样式
         if (context.isPointInPath(currentX, currentY)) {
           switch (this.cutOutBoxBorderArr[i].index) {
             case 1:
@@ -661,15 +693,20 @@ export default class ScreenShort {
               }
               break;
             case 2:
+              // 工具栏被点击则不改变指针样式
+              if (this.data.getToolClickStatus()) break;
               this.screenShortController.style.cursor = "ns-resize";
               break;
             case 3:
+              if (this.data.getToolClickStatus()) break;
               this.screenShortController.style.cursor = "ew-resize";
               break;
             case 4:
+              if (this.data.getToolClickStatus()) break;
               this.screenShortController.style.cursor = "nwse-resize";
               break;
             case 5:
+              if (this.data.getToolClickStatus()) break;
               this.screenShortController.style.cursor = "nesw-resize";
               break;
             default:

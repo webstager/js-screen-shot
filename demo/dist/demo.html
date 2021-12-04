@@ -1,0 +1,19 @@
+<body>
+  <div class="screen-shot-demo" style="text-align: center;">
+    <button onclick="handleScreenShot()">开始截图</button>
+    <div style="margin-top: 100px;">
+      <iframe class="screen-shot-iframe" src="./iframe.html" width="1000px" height="600px" frameborder="0"></iframe>
+    </div>
+  </div>
+  
+  <script src="./screenShotPlugin.umd.js"></script>
+  <script>
+    function handleScreenShot() {
+      // console.log(screenShotPlugin)
+      new screenShotPlugin({enableWebRtc: false, completeCallback: (base64) =>{
+        console.log(base64);
+      }});
+    }
+  </script>
+</body>
+</html>
