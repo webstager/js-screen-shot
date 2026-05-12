@@ -15,13 +15,13 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # 设置node版本
       - name: "Set up Node.js"
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '16.20.2'
+          node-version: "20"
       # 设置pnpm版本
       - name: "Set up pnpm"
         uses: pnpm/action-setup@v4
@@ -35,26 +35,14 @@ jobs:
         run: pnpm run build-rollup:prod
       # 将dist目录打成zip包
       - name: Zip Dist
-        run: zip -r dist.zip dist
-      # 创建Release
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+        run: zip -r js-screen-shot-dist.zip dist
+      # 使用 GitHub 默认 token 创建 Release 并上传产物
+      - name: Create GitHub Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUBTOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: false
-          prerelease: false
-      # 上传zip包
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUBTOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist.zip
-          asset_name: js-screen-shot-dist.zip
-          asset_content_type: application/zip
-
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            js-screen-shot-dist.zip \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "Release ${GITHUB_REF_NAME}" \
+            --verify-tag
