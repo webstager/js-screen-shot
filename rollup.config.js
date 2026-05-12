@@ -10,6 +10,7 @@ import alias from "@rollup/plugin-alias";
 import postcssImport from "postcss-import";
 import postcssUrl from "postcss-url";
 import url from "@rollup/plugin-url";
+import replace from "@rollup/plugin-replace";
 import cssnano from "cssnano";
 import yargs from "yargs";
 import {
@@ -17,9 +18,9 @@ import {
   buildCopyTargetsConfig,
   enableDevServer,
   enablePKGStats,
-  buildTSConfig
+  buildTSConfig,
+  buildProgressPlugin
 } from "./rollup-utils";
-import progress from "rollup-plugin-progress";
 
 // 使用yargs解析命令行执行时的添加参数
 const commandLineParameters = yargs(process.argv.slice(1)).options({
@@ -70,6 +71,10 @@ export default {
       // 读取.browserslist文件
       browser: true,
       preferBuiltins: false
+    }),
+    replace({
+      "process.env.NODE_ENV": JSON.stringify("production"),
+      preventAssignment: true
     }),
     commonjs(),
     alias({
@@ -125,13 +130,16 @@ export default {
       // 超过10kb则拷贝否则转base64
       limit: 10 * 1024 // 10KB
     }),
-    babel(),
+    babel({
+      babelHelpers: "bundled"
+    }),
+    buildProgressPlugin({
+      useDevServer,
+      outputCount: packagingFormat.length,
+      compressedState
+    }),
     enablePKGStats(showModulePKGInfo),
     ...enableDevServer(useDevServer),
-    progress({
-      format: "[:bar] :percent (:current/:total)",
-      clearLine: false
-    }),
     copy({
       targets: buildCopyTargetsConfig(useDevServer)
     })

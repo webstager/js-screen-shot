@@ -21,13 +21,18 @@ jobs:
       - name: "Set up Node.js"
         uses: actions/setup-node@v3
         with:
-          node-version: '14.18.0'
+          node-version: '16.20.2'
+      # 设置pnpm版本
+      - name: "Set up pnpm"
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
       # 安装依赖
       - name: "Install dependencies"
-        run: npm install
+        run: pnpm install --frozen-lockfile
       # 执行构建命令
-      - name: "Install dependencies"
-        run: npm run build-rollup:prod
+      - name: "Build"
+        run: pnpm run build-rollup:prod
       # 将dist目录打成zip包
       - name: Zip Dist
         run: zip -r dist.zip dist
@@ -52,23 +57,4 @@ jobs:
           asset_path: ./dist.zip
           asset_name: js-screen-shot-dist.zip
           asset_content_type: application/zip
-
-
-  create-changelog:
-    runs-on: ubuntu-latest
-    # 需要等build结束后才执行此处
-    needs: build-release
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16.x
-
-      # 生成版本更新日志
-      - run: npx changelogithub
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUBTOKEN}}
 

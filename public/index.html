@@ -1,49 +1,233 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html
+  lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>screen shot demo</title>
-  <script src="./screenShotPlugin.umd.js"></script>
+  <meta
+    charset="UTF-8">
+  <title>
+    screen
+    shot
+    demo</title>
+  <script
+    src="./screenShotPlugin.umd.js"></script>
   <script>
     function setViewSize() {
-      document.body.style.width = window.innerWidth+"px"
-      document.body.style.height = window.innerHeight+"px"
+      document.body.style.width = window.innerWidth + "px";
+      document.body.style.height = window.innerHeight + "px";
     }
-    window.onload = ()=>{
-      setViewSize()
-    }
+
+    window.onload = () => {
+      setViewSize();
+    };
     window.addEventListener("resize", function() {
-      setViewSize()
+      setViewSize();
     });
   </script>
   <style>
-      *{
-          margin: 0;
-          padding: 0;
-      }
-      #app {
-          width: 100%;
-          height: 100%;
-      }
-      #app img {
-          width: 100%;
-          height: auto;
-      }
-  </style>
-  <script type="text/javascript">
-    const changeScreenShot = () => {
-      new screenShotPlugin({enableWebRtc: false,clickCutFullScreen:true, wrcWindowMode: true})
+    * {
+      margin: 0;
+      padding: 0;
     }
+
+    #app {
+      width: 100%;
+      height: 100%;
+    }
+
+    #app img {
+      width: 100%;
+      height: auto;
+    }
+  </style>
+  <script
+    type="text/javascript">
+
+    /**
+     * 绘制五角星的方法
+     * @param {CanvasRenderingContext2D} ctx - Canvas 的绘图上下文
+     * @param {number} startX - 鼠标按下时的起始 X 坐标（中心点）
+     * @param {number} startY - 鼠标按下时的起始 Y 坐标（中心点）
+     * @param {number} currentX - 当前鼠标的 X 坐标
+     * @param {number} currentY - 当前鼠标的 Y 坐标
+     * @param {boolean} [fill=false] - 是否填充五角星
+     * @param {string} [strokeStyle='#000'] - 边框颜色
+     * @param {string} [fillStyle='#000'] - 填充颜色
+     */
+    function drawFivePointedStar(ctx, startX, startY, currentX, currentY, fill = false, strokeStyle = '#a61e1e', fillStyle = '#000') {
+      ctx.save();
+      // 计算外半径
+      const dx = currentX - startX;
+      const dy = currentY - startY;
+      const outerRadius = Math.sqrt(dx * dx + dy * dy);
+
+      // 设置内半径为外半径的一半，可以根据需要调整比例
+      const innerRadius = outerRadius / 2;
+
+      const points = 5; // 五角星
+      const step = Math.PI / points; // 角度步长
+      let rotation = -Math.PI / 2; // 起始角度，使得五角星的第一个点朝上
+
+      ctx.beginPath();
+      for (let i = 0; i < 2 * points; i++) {
+        const radius = (i % 2 === 0) ? outerRadius : innerRadius;
+        const x = startX + radius * Math.cos(rotation);
+        const y = startY + radius * Math.sin(rotation);
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+        rotation += step;
+      }
+      ctx.closePath();
+
+      // 设置样式
+      ctx.strokeStyle = strokeStyle;
+      ctx.fillStyle = fillStyle;
+
+      if (fill) {
+        ctx.fill();
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function createStarElement(startX, startY, currentX, currentY) {
+      const dx = currentX - startX;
+      const dy = currentY - startY;
+      const radius = Math.sqrt(dx * dx + dy * dy);
+      return {
+        customType: "custom",
+        x: startX - radius,
+        y: startY - radius,
+        width: radius * 2,
+        height: radius * 2,
+        toolName: "star",
+        payload: {
+          strokeStyle: "#a61e1e",
+          fillStyle: "#000",
+          fill: false
+        }
+      };
+    }
+
+    function drawFivePointedStarByElement(ctx, element) {
+      const payload = element.payload || {};
+      const startX = element.x + element.width / 2;
+      const startY = element.y + element.height / 2;
+      const currentX = startX + element.width / 2;
+      const currentY = startY;
+      drawFivePointedStar(
+        ctx,
+        startX,
+        startY,
+        currentX,
+        currentY,
+        payload.fill || false,
+        payload.strokeStyle || "#a61e1e",
+        payload.fillStyle || "#000"
+      );
+    }
+
+
+
+
+    let screenShotCanvasContext = null;
+    let currentStarElement = null;
+    const changeScreenShot = () => {
+
+      new screenShotPlugin({
+        clickCutFullScreen: true,
+        wrcWindowMode: true,
+        loadCrossImg: true,
+        enableWebRtc: false,
+        showScreenData:false,
+        userToolbar: [{
+          title: "star",
+          icon: "./img/pentagram.png",
+          activeIcon: "./img/pentagram-h.png",
+          clickFn: ({screenShotCanvas,screenShotController,ScreenShotImageController, currentInfo, imgInfo}) => {
+            screenShotCanvasContext = screenShotCanvas;
+            console.log("图标点击",screenShotCanvas,screenShotController,ScreenShotImageController, currentInfo, imgInfo);
+          }
+        }],
+        h2cImgLoadErrCallback: (err) => {
+          console.log("h2cCrossImgLoadErrFn", err);
+        },
+        h2cIgnoreElementsCallback: (element) => {
+          if(element.id == 'hideDom') {
+            return true;
+          }
+          return false;
+        },
+        canvasEvents: {
+          mouseDownFn(event, mouseX, mouseY, addHistory) {
+            // 鼠标按下时保存画布状态
+            addHistory();
+            currentStarElement = createStarElement(mouseX, mouseY, mouseX, mouseY);
+          },
+          mouseMoveFn(event, { startX, startY, currentX, currentY }, showLastHistory) {
+            if (!screenShotCanvasContext || !currentStarElement) {
+              return;
+            }
+            // 展示鼠标按下时所保存的画布数据
+            showLastHistory(screenShotCanvasContext);
+            currentStarElement = createStarElement(startX, startY, currentX, currentY);
+            // 拖拽时只绘制临时预览，最终元素在 mouseUp 中交给插件托管
+            drawFivePointedStarByElement(screenShotCanvasContext, currentStarElement);
+          },
+          mouseUpFn(showLastHistory, customElementApi) {
+            if (!screenShotCanvasContext || !currentStarElement) {
+              currentStarElement = null;
+              return;
+            }
+            // 将鼠标按下时所保存的画布数据展示出来
+            showLastHistory(screenShotCanvasContext);
+            if (currentStarElement.width > 0 && currentStarElement.height > 0) {
+              const snapshot = customElementApi.addElement(currentStarElement);
+              if (snapshot) {
+                customElementApi.selectElement(snapshot.id);
+              }
+            }
+            currentStarElement = null;
+          }
+        },
+        customElementAdapters: [
+          {
+            toolName: "star",
+            draw(element, context) {
+              drawFivePointedStarByElement(context, element);
+            },
+            hitTest(element, point) {
+              const centerX = element.x + element.width / 2;
+              const centerY = element.y + element.height / 2;
+              const radius = Math.max(element.width, element.height) / 2;
+              const dx = point.x - centerX;
+              const dy = point.y - centerY;
+              return Math.sqrt(dx * dx + dy * dy) <= radius;
+            }
+          }
+        ]
+      });
+    };
   </script>
 </head>
 <body>
-<div id="app">
+<div
+  id="app">
   <div>
     截图插件文字展示
   </div>
-  <br/>
-  <button onclick="changeScreenShot()"> 点击截图 </button>
-  <p>图片展示</p>
+  <br />
+  <button
+    onclick="changeScreenShot()">
+    点击截图
+  </button>
+  <button id="hideDom">
+    需要隐藏的元素
+  </button>
+  <p>
+    图片展示</p>
   <img src="./demo-img.jpeg" alt="">
 </div>
 </body>

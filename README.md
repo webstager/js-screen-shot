@@ -1,4 +1,4 @@
-# js-web-screen-shot · [![npm](https://img.shields.io/badge/npm-v1.9.9_rc.16-2081C1)](https://www.npmjs.com/package/js-web-screen-shot) [![yarn](https://img.shields.io/badge/yarn-v1.9.9_rc.16-F37E42)](https://yarnpkg.com/package/js-web-screen-shot) [![github](https://img.shields.io/badge/GitHub-depositary-9A9A9A)](https://github.com/likaia/js-screen-shot) [![](https://img.shields.io/github/issues/likaia/js-screen-shot)](https://github.com/likaia/js-screen-shot/issues) [![](	https://img.shields.io/github/forks/likaia/js-screen-shot)](https://github.com/likaia/js-screen-shot/network/members) [![](	https://img.shields.io/github/stars/likaia/js-screen-shot)](https://github.com/likaia/js-screen-shot/stargazers)
+# js-web-screen-shot · [![npm](https://img.shields.io/badge/npm-v1.9.9_rc.25-2081C1)](https://www.npmjs.com/package/js-web-screen-shot) [![pnpm](https://img.shields.io/badge/pnpm-v1.9.9_rc.25-F69220)](https://pnpm.io) [![github](https://img.shields.io/badge/GitHub-depositary-9A9A9A)](https://github.com/likaia/js-screen-shot) [![](https://img.shields.io/github/issues/likaia/js-screen-shot)](https://github.com/likaia/js-screen-shot/issues) [![](	https://img.shields.io/github/forks/likaia/js-screen-shot)](https://github.com/likaia/js-screen-shot/network/members) [![](	https://img.shields.io/github/stars/likaia/js-screen-shot)](https://github.com/likaia/js-screen-shot/stargazers)
 web端自定义截屏插件(原生JS版)，运行视频：[实现web端自定义截屏功能](https://www.bilibili.com/video/BV1Ey4y127cV) ,效果图如下：![截屏效果图](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/486d810877a24582aa8cf110e643c138~tplv-k3u1fbpfcp-watermark.image)
 
 ## 写在前面
@@ -6,9 +6,11 @@ web端自定义截屏插件(原生JS版)，运行视频：[实现web端自定义
 - [实现Web端自定义截屏](https://juejin.cn/post/6924368956950052877)
 - [实现Web端自定义截屏(JS版)](https://juejin.cn/post/6931901091445473293)
 
+> 注意⚠️：本文档并非最新的，最新文档请移步[官网](https://www.kaisir.cn/js-screen-shot/)
+
 ## 插件安装
 ```bash
-yarn add js-web-screen-shot
+pnpm add js-web-screen-shot
 
 # or
 
@@ -146,6 +148,18 @@ export const doScreenShot = async ()=>{
 ```
 > 感谢 [@Vanisper](https://github.com/Vanisper) 提供的在electron环境下使用本插件的兼容思路。
 
+### 使用 electron 编写 Mac 软件
+
+Mac 全屏场景下，系统菜单栏可能会覆盖截图工具栏。可以通过 `menuBarHeight` 设置菜单栏高度，插件在计算全屏工具栏位置时会扣除这部分高度。
+
+```typescript
+screenShotIns = new ScreenShot({
+  menuBarHeight: 22
+});
+```
+
+`menuBarHeight` 使用逻辑像素，常见 Mac 菜单栏高度是 `22`，Retina 屏幕视觉尺寸不变；如果开启系统缩放、辅助功能大字号，或使用刘海屏 MacBook，可以按实际项目微调到 `24` 或更高。
+
 ### electron示例代码
 如果你看完上个章节的使用方法，依然不是很理解的话，这里准备了一份在electron环境下使用本插件的demo，请移步[electron-js-web-screen-shot-demo](https://github.com/Vanisper/electron-js-web-screen-shot-demo)。
 
@@ -192,9 +206,10 @@ sessionStorage.getItem("screenShotImg");
 * `closeCallback` 截图关闭回调函数，值为`Function`类型。
 * `triggerCallback` 截图响应回调函数，值为`Function`类型，使用html2canvas截屏时，页面图片过多时响应会较慢；使用webrtc截屏时用户点了分享，该函数为响应完成后触发的事件。回调函数返回一个对象，类型为: `{code: number,msg: string, displaySurface: string | null,displayLabel: string | null}`，code为0时代表截图加载完成，displaySurface返回的的是当前选择的窗口类型，displayLabel返回的是当前选择的标签页标识，浏览器不支持时此值为null。
 * `cancelCallback` 取消分享回到函数，值为`Function`类型，使用webrtc模式截屏时，用户点了取消或者浏览器不支持时所触发的事件。回调函数返回一个对象，类型为：`{code: number,msg: string, errorInfo: string}`，code为-1时代表用户未授权或者浏览器不支持webrtc。
-* `saveCallback` 保存截图回调函数，值为`Function`类型。回调函数中返回两个参数：
+* `saveCallback` 保存截图回调函数，值为`Function`类型。回调函数中返回三个参数：
   * `code` 状态码，number类型，为0时代表保存成功
   * `msg` 消息码，string类型。
+  * `base64` 截图的base64信息，string类型。
 * `level` 截图容器层级，值为number类型。 
 * `cutBoxBdColor` 裁剪区域边框像素点颜色，值为string类型。
 * `maxUndoNum` 最大可撤销次数, 值为number类型
@@ -226,7 +241,7 @@ sessionStorage.getItem("screenShotImg");
 * `cropBoxInfo` 初始裁剪框，值为`{ x: number; y: number; w: number; h: number }`类型，默认不加载。
 * `wrcReplyTime` webrtc模式捕捉屏幕时的响应时间，值为`number`类型，默认为500ms。
 * `wrcImgPosition` webrtc模式下是否需要对图像进行裁剪，值为`{ x: number; y: number; w: number; h: number }`类型，默认为不裁剪。
-* `noScroll` 截图容器是否可滚动，值为`boolean`类型，默认为`true`。
+* `noScroll` 是否禁止页面滚动，值为`boolean`类型，默认为`false`。
 * `maskColor` 蒙层颜色，值为`{ r: number; g: number; b: number; a: number }`类型,默认为:`{ r: 0; g: 0; b: 0; a: 0.6 }`
 * `toolPosition` 工具栏展示位置，值为`string`类型，默认为居中展示，提供三个选项：
   * `left` 左对齐于裁剪框
@@ -316,6 +331,24 @@ screenShotHandler.destroyComponents()
         });
 ```
 > 注意：此方法在1.9.9版本之后不再返回字符串类型的数据，而是返回的对象格式。
+
+#### getCutBoxInfo
+
+该函数用于获取当前裁剪框的位置信息，返回值为一个对象：
+
+* `startX` x 点坐标
+* `startY` y 点坐标
+* `width` 裁剪框宽度
+* `height` 裁剪框高度
+
+示例代码：
+
+```javascript
+import ScreenShot from "js-web-screen-shot";
+
+const screenShotHandler = new ScreenShot();
+const info = screenShotHandler.getCutBoxInfo();
+```
 
 
 ### 工具栏图标定制
