@@ -4,8 +4,7 @@ import type { ScreenShotMode } from "@/lib/application/core/ScreenShotModeResolv
 jest.mock("@/lib/application/core/ScreenSourceManager", () => ({
   loadImageSource: jest.fn(() => Promise.resolve(document.createElement("canvas"))),
   h2cScreenShot: jest.fn(() => Promise.resolve(document.createElement("canvas"))),
-  sendStream: jest.fn(() => Promise.resolve(null)),
-  wrcScreenShot: jest.fn(() => Promise.resolve(null))
+  executeCaptureSource: jest.fn(() => Promise.resolve(null))
 }));
 
 jest.mock("@/store/dom/domCleanup", () => ({
@@ -15,8 +14,7 @@ jest.mock("@/store/dom/domCleanup", () => ({
 import {
   loadImageSource,
   h2cScreenShot,
-  sendStream,
-  wrcScreenShot
+  executeCaptureSource
 } from "@/lib/application/core/ScreenSourceManager";
 import { destroyScreenShotDom } from "@/store/dom/domCleanup";
 
@@ -41,6 +39,7 @@ describe("ScreenShotModeExecutor", () => {
     cancelCallback.mockClear();
     userParamStore.imgSrc = "data:image/png;base64,xxx";
     userParamStore.screenFlow = { mock: true } as any;
+    userParamStore.wrcWindowMode = false;
   });
 
   const runMode = (mode: ScreenShotMode) =>
@@ -58,8 +57,7 @@ describe("ScreenShotModeExecutor", () => {
     await runMode("image");
     expect(loadImageSource).toHaveBeenCalledTimes(1);
     expect(h2cScreenShot).not.toHaveBeenCalled();
-    expect(sendStream).not.toHaveBeenCalled();
-    expect(wrcScreenShot).not.toHaveBeenCalled();
+    expect(executeCaptureSource).not.toHaveBeenCalled();
   });
 
   test("html2canvas 模式调用 h2cScreenShot", async () => {
@@ -67,10 +65,13 @@ describe("ScreenShotModeExecutor", () => {
     expect(h2cScreenShot).toHaveBeenCalledTimes(1);
   });
 
-  test("injected-stream 模式调用 sendStream 并携带 screenFlow", async () => {
+  test("injected-stream 模式会转成统一 capture source plan", async () => {
     await runMode("injected-stream");
-    expect(sendStream).toHaveBeenCalledWith(
-      userParamStore.screenFlow,
+    expect(executeCaptureSource).toHaveBeenCalledWith(
+      {
+        captureSource: "injected-media-stream",
+        renderStrategy: "browser-frame"
+      },
       cancelCallback,
       triggerCallback,
       canvas,
@@ -78,9 +79,20 @@ describe("ScreenShotModeExecutor", () => {
     );
   });
 
-  test("webrtc 模式调用 wrcScreenShot", async () => {
+  test("webrtc 模式会转成统一 capture source plan", async () => {
+    userParamStore.wrcWindowMode = true;
+
     await runMode("webrtc");
-    expect(wrcScreenShot).toHaveBeenCalledTimes(1);
+    expect(executeCaptureSource).toHaveBeenCalledWith(
+      {
+        captureSource: "browser-display-media",
+        renderStrategy: "window-frame"
+      },
+      cancelCallback,
+      triggerCallback,
+      canvas,
+      mouseEvents
+    );
   });
 
   test("加载失败时触发取消回调并清理截图 DOM", async () => {

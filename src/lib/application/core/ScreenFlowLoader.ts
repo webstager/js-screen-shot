@@ -10,10 +10,12 @@ import {
 } from "@/lib/application/core/ScreenFrameDrawer";
 import { stopCapture } from "@/lib/application/core/ScreenCapture";
 import screenDomStore from "@/store/dom/ScreenDomStore";
+import { ScreenShotRenderStrategy } from "@/lib/type/application/ScreenShotPlan";
 
 const SCREENSHOT_SUCCESS_MSG = "截图加载完成";
 
 const resolveCanvasSizes = (
+  renderStrategy: ScreenShotRenderStrategy,
   screenShotImageController: HTMLCanvasElement
 ): CanvasSize => {
   const canvasSize = userParamStore.getCanvasSize();
@@ -26,7 +28,7 @@ const resolveCanvasSizes = (
       ? canvasSize.canvasHeight
       : screenShotImageController.height;
 
-  if (userParamStore.wrcWindowMode) {
+  if (renderStrategy === "window-frame") {
     return {
       containerWidth,
       containerHeight,
@@ -65,6 +67,7 @@ const finalizeScreenShotLoad = () => {
 
 export const loadScreenFlowData = (
   triggerCallback: Function | undefined,
+  renderStrategy: ScreenShotRenderStrategy,
   screenShotImageController: HTMLCanvasElement,
   mouseEventFn: CanvasEventHandlers,
   topEl: HTMLDivElement
@@ -73,7 +76,7 @@ export const loadScreenFlowData = (
     topEl.remove();
     const screenShotCanvas = screenDomStore.screenShotController;
     const videoController = screenDomStore.videoController;
-    const sizes = resolveCanvasSizes(screenShotImageController);
+    const sizes = resolveCanvasSizes(renderStrategy, screenShotImageController);
 
     if (screenShotCanvas == null || videoController == null) {
       finalizeScreenShotLoad();
@@ -99,7 +102,7 @@ export const loadScreenFlowData = (
     screenShotCanvasStore.updateScreenShotCanvas(context);
 
     // 根据当前模式使用对应的绘制策略
-    const frameDrawn = getFrameDrawer().draw({
+    const frameDrawn = getFrameDrawer(renderStrategy).draw({
       ...sizes,
       imgContext,
       videoController

@@ -15,6 +15,11 @@ import { loadScreenFlowData } from "@/lib/application/core/ScreenFlowLoader";
 import { destroyScreenShotDom } from "@/store/dom/domCleanup";
 import screenDomStore from "@/store/dom/ScreenDomStore";
 import { SCREENSHOT_OVERLAY_Z_INDEX } from "@/lib/constants/dom";
+import {
+  ScreenShotCaptureSource,
+  ScreenShotPlan,
+  ScreenShotRenderStrategy
+} from "@/lib/type/application/ScreenShotPlan";
 
 
 // 注入流失败时触发回调并销毁 DOM
@@ -29,6 +34,7 @@ const handleStreamFailure = (cancelCallback: Function | undefined) => {
 // 执行具体的流获取策略，获取成功后统一进入截图加载流程
 const executeStreamStrategy = async (
   strategy: ScreenStreamStrategy,
+  renderStrategy: ScreenShotRenderStrategy,
   triggerCallback: Function | undefined,
   screenShotImageController: HTMLCanvasElement,
   mouseEventFn: CanvasEventHandlers
@@ -45,6 +51,7 @@ const executeStreamStrategy = async (
   document.body.appendChild(topEl);
   loadScreenFlowData(
     triggerCallback,
+    renderStrategy,
     screenShotImageController,
     mouseEventFn,
     topEl
@@ -55,14 +62,16 @@ const executeStreamStrategy = async (
 // WebRTC 模式下通过屏幕捕获流初始化截图流程
 export const wrcScreenShot = (
   cancelCallback: Function | undefined,
+  renderStrategy: ScreenShotRenderStrategy,
   triggerCallback: Function | undefined,
   screenShotImageController: HTMLCanvasElement,
   mouseEventFn: CanvasEventHandlers
 ) =>
   executeStreamStrategy(
     new CaptureStreamStrategy(() =>
-      startCapture(cancelCallback, screenShotImageController)
+      startCapture(cancelCallback, renderStrategy, screenShotImageController)
     ),
+    renderStrategy,
     triggerCallback,
     screenShotImageController,
     mouseEventFn
@@ -72,6 +81,7 @@ export const wrcScreenShot = (
 export const sendStream = (
   stream: MediaStream | null,
   cancelCallback: Function | undefined,
+  renderStrategy: ScreenShotRenderStrategy,
   triggerCallback: Function | undefined,
   screenShotImageController: HTMLCanvasElement,
   mouseEventFn: CanvasEventHandlers
@@ -80,10 +90,46 @@ export const sendStream = (
     new InjectedStreamStrategy(stream, () =>
       handleStreamFailure(cancelCallback)
     ),
+    renderStrategy,
     triggerCallback,
     screenShotImageController,
     mouseEventFn
   );
+
+export const executeCaptureSource = (
+  plan: ScreenShotPlan,
+  cancelCallback: Function | undefined,
+  triggerCallback: Function | undefined,
+  screenShotImageController: HTMLCanvasElement,
+  mouseEventFn: CanvasEventHandlers
+) => {
+  const sourceHandlers: Record<
+    ScreenShotCaptureSource,
+    () => Promise<MediaStream | null>
+  > = {
+    "browser-display-media": () =>
+      wrcScreenShot(
+        cancelCallback,
+        plan.renderStrategy,
+        triggerCallback,
+        screenShotImageController,
+        mouseEventFn
+      ),
+    "injected-media-stream": () =>
+      sendStream(
+        userParamStore.screenFlow,
+        cancelCallback,
+        plan.renderStrategy,
+        triggerCallback,
+        screenShotImageController,
+        mouseEventFn
+      ),
+    "static-image": () => Promise.resolve(null),
+    "dom-render": () => Promise.resolve(null)
+  };
+
+  return sourceHandlers[plan.captureSource]();
+};
 
 
 // 通过传入图片资源初始化截图画布

@@ -4,7 +4,8 @@ import userParamStore from "@/store/UserParamStore";
 import screenDomStore from "@/store/dom/ScreenDomStore";
 import {
   ScreenFrameDrawer,
-  DrawFrameParams
+  DrawFrameParams,
+  ScreenShotRenderStrategy
 } from "@/lib/type/application/ScreenFrame";
 export type { CanvasSize } from "@/lib/type/application/ScreenFrame";
 
@@ -96,13 +97,14 @@ class BrowserFrameDrawer implements ScreenFrameDrawer {
   }
 }
 
-const frameDrawers: Record<"window" | "browser", ScreenFrameDrawer> = {
-  window: new WindowFrameDrawer(),
-  browser: new BrowserFrameDrawer()
+const frameDrawers: Record<ScreenShotRenderStrategy, ScreenFrameDrawer> = {
+  "window-frame": new WindowFrameDrawer(),
+  "browser-frame": new BrowserFrameDrawer()
 };
 
-export const getFrameDrawer = (): ScreenFrameDrawer =>
-  userParamStore.wrcWindowMode ? frameDrawers.window : frameDrawers.browser;
+export const getFrameDrawer = (
+  renderStrategy: ScreenShotRenderStrategy
+): ScreenFrameDrawer => frameDrawers[renderStrategy];
 
 export const getWindowContentData = (
   videoWidth: number,

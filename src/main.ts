@@ -17,13 +17,12 @@ import screenShotCanvasStore from "@/store/ScreenShotCanvasStore";
 import userParamStore from "@/store/UserParamStore";
 import { setOptionalParameter } from "@/lib/features/canvas/config/SetOptionalParameter";
 import {
-  type ScreenShotMode,
   adjustContainerLevels,
   registerContainerShortcuts,
   registerForRightClickEvent,
-  resolveScreenShotMode,
+  resolveScreenShotPlan,
   setScreenShotContainerSize,
-  executeLoadMode
+  executeLoadPlan
 } from "@/lib/application/LoadCoreComponents";
 import drawingDataStore from "@/store/DrawingDataStore";
 import { CanvasElementSnapshot } from "@/lib/type/components/canvas";
@@ -38,6 +37,7 @@ import screenDomStore from "@/store/dom/ScreenDomStore";
 import toolPanelDomStore from "@/store/dom/ToolPanelDomStore";
 import { destroyScreenShotDom } from "@/store/dom/domCleanup";
 import type { CropBoxBounds } from "@/lib/type/components/cropBox";
+import { isBrowserEnv } from "@/lib/shared/platform/BrowserEnv";
 
 export default class ScreenShot {
   // 截图图片存放容器
@@ -52,6 +52,12 @@ export default class ScreenShot {
   private drawArrow = new DrawArrow();
 
   constructor(options: ScreenShotOptions) {
+    if (!isBrowserEnv()) {
+      throw new Error(
+        "js-web-screen-shot must be instantiated in a browser environment."
+      );
+    }
+
     // 提取调用者传入的配置
     setPlugInParameters(options);
     // 创建截图所需dom并设置回调函数
@@ -117,9 +123,9 @@ export default class ScreenShot {
     };
 
     // 获取截图模式，调用与之对应的方法做最后的加载工作
-    const mode: ScreenShotMode = resolveScreenShotMode();
-    executeLoadMode(
-      mode,
+    const plan = resolveScreenShotPlan();
+    executeLoadPlan(
+      plan,
       mouseEvents,
       context,
       triggerCallback,

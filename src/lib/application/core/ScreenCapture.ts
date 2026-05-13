@@ -1,7 +1,7 @@
 import drawingDataStore from "@/store/DrawingDataStore";
-import userParamStore from "@/store/UserParamStore";
 import { destroyScreenShotDom } from "@/store/dom/domCleanup";
 import screenDomStore from "@/store/dom/ScreenDomStore";
+import { ScreenShotRenderStrategy } from "@/lib/type/application/ScreenShotPlan";
 
 type ExtendedMediaTrackConstraints = MediaTrackConstraints & {
   displaySurface?: string;
@@ -9,6 +9,7 @@ type ExtendedMediaTrackConstraints = MediaTrackConstraints & {
 };
 
 const buildVideoConstraints = (
+  renderStrategy: ScreenShotRenderStrategy,
   screenShotImageController: HTMLCanvasElement
 ): ExtendedMediaTrackConstraints => {
   const baseWidth = screenShotImageController.width * drawingDataStore.dpr;
@@ -20,7 +21,7 @@ const buildVideoConstraints = (
     displaySurface: "browser"
   };
 
-  if (userParamStore.wrcWindowMode) {
+  if (renderStrategy === "window-frame") {
     constraints.width = window.screen.width * drawingDataStore.dpr;
     constraints.height = window.screen.height * drawingDataStore.dpr;
     constraints.displaySurface = "window";
@@ -49,10 +50,14 @@ const handleCaptureError = (
 
 export const startCapture = async (
   cancelCallback: Function | undefined,
+  renderStrategy: ScreenShotRenderStrategy,
   screenShotImageController: HTMLCanvasElement
 ) => {
   let captureStream: MediaStream | null = null;
-  const videoConstraints = buildVideoConstraints(screenShotImageController);
+  const videoConstraints = buildVideoConstraints(
+    renderStrategy,
+    screenShotImageController
+  );
 
   try {
     captureStream = await navigator.mediaDevices.getDisplayMedia({

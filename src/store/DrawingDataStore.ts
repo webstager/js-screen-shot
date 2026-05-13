@@ -40,11 +40,12 @@ import { registerStoreReset } from "@/store/utils/resetRegistry";
 import { CropBoxBorderOption } from "@/lib/constants/cropBoxOptions";
 import { LINE_DASH } from "@/lib/constants/text";
 import { logger } from "@/lib/utils/Logger";
+import { getDevicePixelRatio } from "@/lib/shared/platform/BrowserEnv";
 
 class DrawingDataStore {
   private initialState(): DrawingStoreDataType {
     return {
-      dpr: window.devicePixelRatio || 1,
+      dpr: getDevicePixelRatio(),
       getFullScreenStatus: false,
       // 裁剪框边框节点坐标事件
       selectionBorderNodes: [],

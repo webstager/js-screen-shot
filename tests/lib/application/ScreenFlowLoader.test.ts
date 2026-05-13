@@ -65,7 +65,13 @@ describe("ScreenFlowLoader", () => {
     const overlay = document.createElement("div");
     document.body.appendChild(overlay);
 
-    loadScreenFlowData(triggerCallback, imageController, mouseEvents, overlay);
+    loadScreenFlowData(
+      triggerCallback,
+      "browser-frame",
+      imageController,
+      mouseEvents,
+      overlay
+    );
     jest.runOnlyPendingTimers();
 
     await Promise.resolve();
@@ -80,6 +86,7 @@ describe("ScreenFlowLoader", () => {
       })
     );
     expect(stopCapture).toHaveBeenCalled();
+    expect(mockFrameDrawer).toHaveBeenCalledWith("browser-frame");
     const drawerInstance = mockFrameDrawer.mock.results[0].value;
     expect(drawerInstance.draw).toHaveBeenCalled();
   });

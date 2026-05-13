@@ -2,11 +2,14 @@ jest.mock("nanoid", () => ({ nanoid: () => "test-id" }));
 
 jest.mock("@/lib/application/LoadCoreComponents", () => ({
   adjustContainerLevels: jest.fn(),
-  executeLoadMode: jest.fn(),
+  executeLoadPlan: jest.fn(),
   isCustomTool: jest.fn(() => false),
   registerContainerShortcuts: jest.fn(),
   registerForRightClickEvent: jest.fn(),
-  resolveScreenShotMode: jest.fn(() => "html2canvas"),
+  resolveScreenShotPlan: jest.fn(() => ({
+    captureSource: "dom-render",
+    renderStrategy: "browser-frame"
+  })),
   setScreenShotContainerSize: jest.fn((canvas: HTMLCanvasElement) => {
     canvas.width = 320;
     canvas.height = 180;
@@ -17,7 +20,7 @@ jest.mock("@/lib/application/LoadCoreComponents", () => ({
 import ScreenShot from "@/main";
 import {
   adjustContainerLevels,
-  executeLoadMode,
+  executeLoadPlan,
   registerContainerShortcuts
 } from "@/lib/application/LoadCoreComponents";
 import screenDomStore from "@/store/dom/ScreenDomStore";
@@ -74,7 +77,7 @@ describe("ScreenShot lifecycle", () => {
     expect(registerContainerShortcuts).toHaveBeenCalledWith(
       screenDomStore.textInputController
     );
-    expect(executeLoadMode).toHaveBeenCalledTimes(1);
+    expect(executeLoadPlan).toHaveBeenCalledTimes(1);
   });
 
   test("destroyComponents 会移除 DOM、键盘监听并重置 store 引用", () => {

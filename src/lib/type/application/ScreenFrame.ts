@@ -1,3 +1,5 @@
+import { ScreenShotRenderStrategy } from "@/lib/type/application/ScreenShotPlan";
+
 export type CanvasSize = {
   containerWidth: number;
   containerHeight: number;
@@ -13,3 +15,5 @@ export type DrawFrameParams = CanvasSize & {
 export interface ScreenFrameDrawer {
   draw(params: DrawFrameParams): boolean;
 }
+
+export type { ScreenShotRenderStrategy };

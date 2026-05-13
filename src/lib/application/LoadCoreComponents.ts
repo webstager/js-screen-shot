@@ -17,9 +17,21 @@ export {
   loadImageSource
 } from "@/lib/application/core/ScreenSourceManager";
 
-export { resolveScreenShotMode } from "@/lib/application/core/ScreenShotModeResolver";
+export {
+  resolveScreenShotMode,
+  resolveScreenShotPlan,
+  resolveRenderStrategy
+} from "@/lib/application/core/ScreenShotModeResolver";
 export type { ScreenShotMode } from "@/lib/type/application/ScreenShotMode";
+export type {
+  ScreenShotCaptureSource,
+  ScreenShotPlan,
+  ScreenShotRenderStrategy
+} from "@/lib/type/application/ScreenShotPlan";
 
-export { executeLoadMode } from "@/lib/application/core/ScreenShotModeExecutor";
+export {
+  executeLoadMode,
+  executeLoadPlan
+} from "@/lib/application/core/ScreenShotModeExecutor";
 
 export { showCanvasLastHistory, isCustomTool } from "@/lib/application/core/HistoryManager";

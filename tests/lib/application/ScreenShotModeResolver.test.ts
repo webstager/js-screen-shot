@@ -1,11 +1,16 @@
-import { resolveScreenShotMode } from "@/lib/application/core/ScreenShotModeResolver";
+import {
+  resolveRenderStrategy,
+  resolveScreenShotMode,
+  resolveScreenShotPlan
+} from "@/lib/application/core/ScreenShotModeResolver";
 
 jest.mock("@/store/UserParamStore", () => ({
   __esModule: true,
   default: {
     enableWebRtc: true,
     imgSrc: null,
-    screenFlow: null
+    screenFlow: null,
+    wrcWindowMode: false
   }
 }));
 
@@ -16,6 +21,7 @@ describe("ScreenShotModeResolver", () => {
     userParamStore.enableWebRtc = true;
     userParamStore.imgSrc = null;
     userParamStore.screenFlow = null;
+    userParamStore.wrcWindowMode = false;
   });
 
   test("image 模式优先级最高", () => {
@@ -37,5 +43,16 @@ describe("ScreenShotModeResolver", () => {
 
   test("默认走 webrtc", () => {
     expect(resolveScreenShotMode()).toBe("webrtc");
+  });
+
+  test("统一 plan 会同时返回 capture source 和 render strategy", () => {
+    userParamStore.screenFlow = {} as MediaStream;
+    userParamStore.wrcWindowMode = true;
+
+    expect(resolveScreenShotPlan()).toEqual({
+      captureSource: "injected-media-stream",
+      renderStrategy: "window-frame"
+    });
+    expect(resolveRenderStrategy()).toBe("window-frame");
   });
 });
