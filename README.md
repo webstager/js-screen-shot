@@ -42,17 +42,52 @@ new ScreenShot();
 ```
 * 在业务代码中使用时实例化插件即可
 ```javascript
-    // 截图确认按钮回调函数
-    const callback = ({base64, cutInfo})=>{
-      console.log(base64, cutInfo);
-    }
-    // 截图取消时的回调函数
-    const closeFn = ()=>{
-      console.log("截图窗口关闭");
-    }
-    new screenShotPlugin({enableWebRtc: true, completeCallback: callback,closeCallback: closeFn});
+// 截图确认按钮回调函数
+const callback = ({base64, cutInfo})=>{
+  console.log(base64, cutInfo);
+}
+// 截图取消时的回调函数
+const closeFn = ()=>{
+  console.log("截图窗口关闭");
+}
+new screenShotPlugin({
+  capture: {
+    source: "display-media"
+  },
+  completeCallback: callback,
+  closeCallback: closeFn
+});
 ```
 > ⚠️注意：实例化插件时一定要等dom加载完成，否则插件无法正常工作。
+
+### 推荐的 capture 配置
+从 `2.0.0` 开始，推荐优先使用 `capture` 来描述截图来源与渲染策略：
+
+```typescript
+new ScreenShot({
+  capture: {
+    source: "display-media",
+    render: "browser-frame"
+  }
+});
+```
+
+`capture` 支持的配置如下：
+
+* `source`
+  * `display-media` 浏览器原生屏幕捕获
+  * `injected-stream` 外部传入屏幕流，适合 `Electron`
+  * `dom` 使用 `html2canvas` 渲染当前页面
+  * `image` 使用外部传入的图片内容
+* `render`
+  * `browser-frame` 当前标签页截图
+  * `window-frame` 窗口截图
+* `stream`
+  * 当 `source` 为 `injected-stream` 时必传
+* `imageSrc`
+  * 当 `source` 为 `image` 时必传
+
+> 旧参数 `enableWebRtc`、`screenFlow`、`imgSrc`、`wrcWindowMode` 仍然兼容，但已经进入废弃迁移阶段。新项目请直接使用 `capture`，旧参数将在后续版本中移除。
 
 ### electron环境下使用插件
 由于electron环境下无法直接调用webrtc来获取屏幕流，因此需要调用者自己稍作处理，具体做法如下所示：
@@ -140,8 +175,10 @@ export const doScreenShot = async ()=>{
   const stream = await getInitStream(sources[0]);
 
   new ScreenShot({
-    enableWebRtc: true, // 启用webrtc
-    screenFlow: stream!, // 传入屏幕流数据
+    capture: {
+      source: "injected-stream",
+      stream: stream!
+    },
     level: 999,
   });
 }
@@ -170,7 +207,9 @@ screenShotIns = new ScreenShot({
 import ScreenShot from "js-web-screen-shot";
 
 const config = {
-    enableWebRtc: false
+    capture: {
+      source: "dom"
+    }
 };
 const screenShotHandler = new ScreenShot(config);
 ```
@@ -197,8 +236,13 @@ const screenShotHandler = new ScreenShot(config);
 
 ### 参数说明
 截图插件有一个可选参数，它接受一个对象，对象每个key的作用如下:
-* `enableWebRtc` 是否启用webrtc，值为`boolean`类型，值为`false`则使用`html2canvas`来截图
-* `screenFlow` 设备提供的屏幕流数据(用于electron环境下自己传入的视频流数据)，需要将**enableWebRtc**属性设为`true`
+* `capture` 推荐使用的新截图配置，值为`Object`类型：
+  * `source` 截图来源，值为`display-media | injected-stream | dom | image`
+  * `render` 渲染策略，值为`browser-frame | window-frame`
+  * `stream` 当 `source` 为 `injected-stream` 时必传，值为 `MediaStream`
+  * `imageSrc` 当 `source` 为 `image` 时必传，值为 `string`
+* `enableWebRtc` 已废弃。旧写法中用于控制是否启用 webrtc，值为`boolean`类型，值为`false`则使用`html2canvas`来截图
+* `screenFlow` 已废弃。旧写法中用于传入设备提供的屏幕流数据(常用于electron环境)
 * `completeCallback` 截图完成回调函数，值为`Function`类型，最右侧的对号图标点击后会将图片的base64地址与裁剪信息回传给你定义的函数，如果不传的话则会将这些数据放到`sessionStorage`中，你可以通过下述方式拿到他：
 ```javascript
 sessionStorage.getItem("screenShotImg");
@@ -232,7 +276,7 @@ sessionStorage.getItem("screenShotImg");
 * `customRightClickEvent` 自定义容器的右键点击事件，值为`Object`类型，接受2个参数：
   * `state` 是否拦截右键点击，值为boolean类型，默认为`false`。
   * `handleFn` 拦截后的事件处理函数，该属性为可选项，如果不传，默认行为是销毁组件。
-* `imgSrc` 截图内容，如果你已经通过其他方式获取到了屏幕内容（例如`electron`环境），那么可以将获取到的内容传入，此时插件将使用你传进来的图片，值为`string`类型（可以为图片`url`地址或者`base64`），默认为`null`。
+* `imgSrc` 已废弃。旧写法中用于传入截图内容（例如`electron`环境下已有图片数据）。“新写法”请改用 `capture.imageSrc`
 * `loadCrossImg` 是否加载跨域图片，值为`boolean`类型，默认为`false`。
 * `proxyUrl` 代理服务器地址，值为`string`类型，默认为""
 * `screenShotDom` 需要进行截图的容器，值为`HTMLElement`类型，默认使用的是`body`。
@@ -248,7 +292,7 @@ sessionStorage.getItem("screenShotImg");
   * `center` 居中对齐于裁剪框
   * `right` 右对齐于裁剪框
 * `writeBase64` 是否将截图内容写入剪切板，值为`boolean`类型，默认为`true`
-* `wrcWindowMode` 是否启用窗口截图模式，值为`boolean`类型，默认为`false`，即当前标签页截图。如果标签页截图的内容有滚动条或者底部有空缺，可以考虑启用此模式。
+* `wrcWindowMode` 已废弃。旧写法中用于启用窗口截图模式。新写法请改用 `capture.render = "window-frame"`
 * `hiddenScrollBar` 是否隐藏滚动条，用webrtc模式截图时chrome 112版本的浏览器在部分系统下会挤压出现滚动条，如果出现你可以尝试通过此参数来进行修复。值为`Object`类型，有4个属性：
   * `state: boolean`; 启用状态, 默认为`false`
   * `fillState?: boolean`; 填充状态，默认为`false`
@@ -261,6 +305,18 @@ sessionStorage.getItem("screenShotImg");
 > * `hiddenScrollBar`方案还是采用标签页截图，但是会造成内容挤压，底部出现空白。
 >
 > 两种方案的优点与缺点讲完了，最好的办法还是希望`chrome`能在之后的版本更新中修复此问题。
+
+### 迁移建议
+如果你正在从旧参数迁移到新参数，可以按下面的映射来替换：
+
+* `enableWebRtc: true` -> `capture.source: "display-media"`
+* `enableWebRtc: false` -> `capture.source: "dom"`
+* `screenFlow` -> `capture.source: "injected-stream" + capture.stream`
+* `imgSrc` -> `capture.source: "image" + capture.imageSrc`
+* `wrcWindowMode: true` -> `capture.render: "window-frame"`
+* `wrcWindowMode: false` -> `capture.render: "browser-frame"`
+
+> 当前版本仍兼容旧参数，但运行时会给出废弃提示。建议尽快切换到 `capture`，旧参数将在不久的将来移除。
 
 
 > 上述类型中的`?:`为ts中的可选类型，意思为：这个key是可选的，如果需要就传，不需要就不传。
@@ -319,7 +375,10 @@ screenShotHandler.destroyComponents()
       const plugin = new screenShotPlugin(
         {
           clickCutFullScreen:true,
-          wrcWindowMode: true,
+          capture: {
+            source: "display-media",
+            render: "window-frame"
+          },
           cropBoxInfo:{x:350, y:20, w:300, h:300},
           completeCallback: ({base64, cutInfo}) => {
             console.log(base64, cutInfo);

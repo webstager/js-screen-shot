@@ -8,6 +8,7 @@ import { DrawArrow } from "@/lib/features/canvas/drawing/DrawArrow";
 
 import KeyboardEventHandle from "@/lib/features/canvas/events/KeyboardEventHandle";
 import { setPlugInParameters } from "@/lib/features/canvas/config/SetPlugInParameters";
+import { normalizeScreenShotOptions } from "@/lib/features/canvas/config/NormalizeScreenShotOptions";
 import { getCanvas2dCtx } from "@/lib/shared/canvas/CanvasPatch";
 
 import { isTouchDevice } from "@/lib/shared/platform/DeviceTypeVerif";
@@ -58,22 +59,24 @@ export default class ScreenShot {
       );
     }
 
+    const normalizedOptions = normalizeScreenShotOptions(options);
+
     // 提取调用者传入的配置
-    setPlugInParameters(options);
+    setPlugInParameters(normalizedOptions);
     // 创建截图所需dom并设置回调函数
-    new CreateDom(options);
+    new CreateDom(normalizedOptions);
     // 创建webrtc模式所需要的辅助dom
     screenDomStore.initWebRtcDom();
     this.screenShotImageController = document.createElement("canvas");
 
     // 设置插件的可选参数
-    setOptionalParameter(options);
+    setOptionalParameter(normalizedOptions);
     // 获取截图区域canvas容器，存储到store中
     screenDomStore.hydrateDomRefs();
     toolPanelDomStore.hydrateDomRefs();
 
     // 加载截图组件
-    this.load(options);
+    this.load(normalizedOptions);
   }
 
   // 加载截图组件

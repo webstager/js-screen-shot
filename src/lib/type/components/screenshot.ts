@@ -32,9 +32,25 @@ export type ImageSize = {
   h: number;
 };
 
+export type ScreenShotCaptureSourceOption =
+  | "display-media"
+  | "injected-stream"
+  | "dom"
+  | "image";
+
+export type ScreenShotRenderMode = "browser-frame" | "window-frame";
+
+export type ScreenShotCaptureOptions = {
+  source?: ScreenShotCaptureSourceOption;
+  render?: ScreenShotRenderMode;
+  stream?: MediaStream;
+  imageSrc?: string;
+};
+
 export type ScreenShotOptions = {
   x?: number;
   y?: number;
+  capture?: ScreenShotCaptureOptions;
   enableWebRtc?: boolean;
   screenFlow?: MediaStream;
   level?: number;
