@@ -20,6 +20,7 @@ import {
   ScreenShotPlan,
   ScreenShotRenderStrategy
 } from "@/lib/type/application/ScreenShotPlan";
+import type { SnapDomRenderer } from "@/lib/type/components/screenshot";
 
 
 // 注入流失败时触发回调并销毁 DOM
@@ -125,12 +126,27 @@ export const executeCaptureSource = (
         mouseEventFn
       ),
     "static-image": () => Promise.resolve(null),
-    "dom-render": () => Promise.resolve(null)
+    "dom-render": () => Promise.resolve(null),
+    "snapdom-render": () => Promise.resolve(null)
   };
 
   return sourceHandlers[plan.captureSource]();
 };
 
+const getWindowSnapDom = (): SnapDomRenderer | null => {
+  if (typeof window === "undefined") return null;
+  return (window as unknown as { snapdom?: SnapDomRenderer }).snapdom ?? null;
+};
+
+export const resolveSnapDomRenderer = (): SnapDomRenderer => {
+  const snapdom = userParamStore.snapdom ?? getWindowSnapDom();
+  if (snapdom?.toCanvas == null || typeof snapdom.toCanvas !== "function") {
+    throw new Error(
+      '[js-web-screen-shot] capture.source 为 "snapdom" 时，需要先引入 SnapDOM，并通过 capture.snapdom 传入或暴露为 window.snapdom。'
+    );
+  }
+  return snapdom;
+};
 
 // 通过传入图片资源初始化截图画布
 export const loadImageSource = (
@@ -149,6 +165,23 @@ export const loadImageSource = (
     initScreenShot(triggerCallback, context, canvas, mouseEventFn);
     return canvas;
   });
+
+// SnapDOM 模式渲染 DOM 并进入截图流程
+export const snapdomScreenShot = async (
+  triggerCallback: Function | undefined,
+  context: CanvasRenderingContext2D,
+  mouseEventFn: CanvasEventHandlers
+): Promise<HTMLCanvasElement> => {
+  const target = userParamStore.screenShotDom ?? document.body;
+  const canvas = await resolveSnapDomRenderer().toCanvas(
+    target,
+    userParamStore.snapdomOptions
+  );
+  if (screenDomStore.screenShotController != null) {
+    initScreenShot(triggerCallback, context, canvas, mouseEventFn);
+  }
+  return canvas;
+};
 
 // html2canvas 模式渲染 DOM 并进入截图流程
 export const h2cScreenShot = async (

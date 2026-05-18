@@ -78,14 +78,22 @@ new ScreenShot({
   * `display-media` 浏览器原生屏幕捕获
   * `injected-stream` 外部传入屏幕流，适合 `Electron`
   * `dom` 使用 `html2canvas` 渲染当前页面
+  * `snapdom` 使用 SnapDOM 渲染当前页面
   * `image` 使用外部传入的图片内容
 * `render`
   * `browser-frame` 当前标签页截图
   * `window-frame` 窗口截图
+* `cursor`
+  * 屏幕捕获流是否包含鼠标指针，值为 `never | motion | always`，默认 `never`
+  * 仅对 `source: "display-media"` 生效；`injected-stream` 模式下需要在创建外部流时自行处理
 * `stream`
   * 当 `source` 为 `injected-stream` 时必传
 * `imageSrc`
   * 当 `source` 为 `image` 时必传
+* `snapdom`
+  * 当 `source` 为 `snapdom` 时可传，值为 SnapDOM 导出的 `snapdom` 对象；不传时会读取 `window.snapdom`
+* `snapdomOptions`
+  * 当 `source` 为 `snapdom` 时可传，值为 SnapDOM 的截图配置
 
 > 旧参数 `enableWebRtc`、`screenFlow`、`imgSrc`、`wrcWindowMode` 仍然兼容，但已经进入废弃迁移阶段。新项目请直接使用 `capture`，旧参数将在后续版本中移除。
 
@@ -183,6 +191,45 @@ export const doScreenShot = async ()=>{
   });
 }
 ```
+> `capture.cursor` 只会影响浏览器原生 `display-media` 捕获。Electron 通过 `capture.source = "injected-stream"` 传入的流已经在外部创建，插件无法再从流里移除鼠标指针。
+
+如果 Electron 截图底图里仍然出现鼠标指针，可以在调用侧用 `@nut-tree/nut-js` 做兜底：截图前保存当前鼠标位置并移出屏幕区域，等 `triggerCallback` 触发后再移回。这个逻辑需要放在 Electron 有 Node 能力的一侧执行，并按系统要求授予辅助功能/自动化权限。
+
+```typescript
+import ScreenShot from "js-web-screen-shot";
+import { mouse, Point, straightTo } from "@nut-tree/nut-js";
+import { getDesktopCapturerSource } from "xxx.ts";
+import { getInitStream } from "yyy.ts";
+
+export const doScreenShotWithoutCursor = async () => {
+  const previousPosition = await mouse.getPosition();
+  await mouse.move(straightTo(new Point(-100, -100)));
+
+  let cursorRestored = false;
+  const restoreCursor = async () => {
+    if (cursorRestored) return;
+    cursorRestored = true;
+    await mouse.move(straightTo(previousPosition));
+  };
+
+  const sources = await getDesktopCapturerSource();
+  const stream = await getInitStream(sources[0]);
+
+  new ScreenShot({
+    capture: {
+      source: "injected-stream",
+      stream: stream!
+    },
+    triggerCallback: restoreCursor,
+    cancelCallback: restoreCursor,
+    closeCallback: restoreCursor,
+    level: 999
+  });
+};
+```
+
+如果你的多屏坐标不允许负数位置，可以把 `new Point(-100, -100)` 换成主屏幕右下角外侧或项目里确认过的屏幕外坐标。
+
 > 感谢 [@Vanisper](https://github.com/Vanisper) 提供的在electron环境下使用本插件的兼容思路。
 
 ### 使用 electron 编写 Mac 软件
@@ -237,10 +284,13 @@ const screenShotHandler = new ScreenShot(config);
 ### 参数说明
 截图插件有一个可选参数，它接受一个对象，对象每个key的作用如下:
 * `capture` 推荐使用的新截图配置，值为`Object`类型：
-  * `source` 截图来源，值为`display-media | injected-stream | dom | image`
+  * `source` 截图来源，值为`display-media | injected-stream | dom | snapdom | image`
   * `render` 渲染策略，值为`browser-frame | window-frame`
+  * `cursor` 屏幕捕获流是否包含鼠标指针，值为`never | motion | always`，默认 `never`，仅对 `source: "display-media"` 生效
   * `stream` 当 `source` 为 `injected-stream` 时必传，值为 `MediaStream`
   * `imageSrc` 当 `source` 为 `image` 时必传，值为 `string`
+  * `snapdom` 当 `source` 为 `snapdom` 时可传，值为 SnapDOM 导出的 `snapdom` 对象；不传时会读取 `window.snapdom`
+  * `snapdomOptions` 当 `source` 为 `snapdom` 时可传，值为 SnapDOM 的截图配置
 * `enableWebRtc` 已废弃。旧写法中用于控制是否启用 webrtc，值为`boolean`类型，值为`false`则使用`html2canvas`来截图
 * `screenFlow` 已废弃。旧写法中用于传入设备提供的屏幕流数据(常用于electron环境)
 * `completeCallback` 截图完成回调函数，值为`Function`类型，最右侧的对号图标点击后会将图片的base64地址与裁剪信息回传给你定义的函数，如果不传的话则会将这些数据放到`sessionStorage`中，你可以通过下述方式拿到他：
@@ -292,6 +342,9 @@ sessionStorage.getItem("screenShotImg");
   * `center` 居中对齐于裁剪框
   * `right` 右对齐于裁剪框
 * `writeBase64` 是否将截图内容写入剪切板，值为`boolean`类型，默认为`true`
+* `exportOptions` 截图导出配置，值为`Object`类型：
+  * `type` 导出图片类型，值为`image/png | image/jpeg | image/webp`，默认为`image/png`
+  * `quality` 导出图片质量，值为`0 ~ 1`之间的数字，默认为`0.75`。该参数主要对`image/jpeg`和`image/webp`生效，`image/png`通常会忽略质量参数。
 * `wrcWindowMode` 已废弃。旧写法中用于启用窗口截图模式。新写法请改用 `capture.render = "window-frame"`
 * `hiddenScrollBar` 是否隐藏滚动条，用webrtc模式截图时chrome 112版本的浏览器在部分系统下会挤压出现滚动条，如果出现你可以尝试通过此参数来进行修复。值为`Object`类型，有4个属性：
   * `state: boolean`; 启用状态, 默认为`false`

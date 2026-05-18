@@ -1,11 +1,13 @@
 import drawingDataStore from "@/store/DrawingDataStore";
 import { destroyScreenShotDom } from "@/store/dom/domCleanup";
 import screenDomStore from "@/store/dom/ScreenDomStore";
+import userParamStore from "@/store/UserParamStore";
 import { ScreenShotRenderStrategy } from "@/lib/type/application/ScreenShotPlan";
+import type { ScreenShotCursorCapture } from "@/lib/type/components/screenshot";
 
 type ExtendedMediaTrackConstraints = MediaTrackConstraints & {
   displaySurface?: string;
-  cursor?: "always" | "motion" | "never";
+  cursor?: ScreenShotCursorCapture;
 };
 
 const buildVideoConstraints = (
@@ -15,7 +17,7 @@ const buildVideoConstraints = (
   const baseWidth = screenShotImageController.width * drawingDataStore.dpr;
   const baseHeight = screenShotImageController.height * drawingDataStore.dpr;
   const constraints: ExtendedMediaTrackConstraints = {
-    cursor: "always",
+    cursor: userParamStore.captureCursor,
     width: baseWidth,
     height: baseHeight,
     displaySurface: "browser"

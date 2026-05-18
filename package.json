@@ -20,6 +20,7 @@
     "test:e2e": "playwright test",
     "test:all": "pnpm run typecheck && pnpm run test:unit && pnpm run test:e2e",
     "verify": "pnpm run test:all && pnpm run build-rollup:prod",
+    "release:publish": "sh scripts/release-publish.sh",
     "commit": "git-cz",
     "prepare": "husky install"
   },

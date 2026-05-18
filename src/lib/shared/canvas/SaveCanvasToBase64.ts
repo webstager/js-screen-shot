@@ -2,7 +2,12 @@
  * 将指定区域的canvas转换为base64格式的图片
  */
 import { getCanvas2dCtx } from "@/lib/shared/canvas/CanvasPatch";
-import { DEFAULT_CANVAS_EXPORT_QUALITY } from "@/lib/constants/image";
+import {
+  DEFAULT_CANVAS_EXPORT_QUALITY,
+  DEFAULT_CANVAS_EXPORT_TYPE
+} from "@/lib/constants/image";
+import type { CanvasExportType } from "@/lib/type/components/screenshot";
+import { normalizeCanvasExportOptions } from "@/lib/shared/canvas/CanvasExportOptions";
 
 export function saveCanvasToBase64(
   context: CanvasRenderingContext2D,
@@ -11,8 +16,10 @@ export function saveCanvasToBase64(
   width: number,
   height: number,
   quality = DEFAULT_CANVAS_EXPORT_QUALITY,
-  writeBase64 = true
+  writeBase64 = true,
+  type: CanvasExportType = DEFAULT_CANVAS_EXPORT_TYPE
 ) {
+  const exportOptions = normalizeCanvasExportOptions({ type, quality });
   // 获取设备像素比
   const dpr = window.devicePixelRatio || 1;
   // 获取裁剪框区域图片信息
@@ -36,7 +43,12 @@ export function saveCanvasToBase64(
           if (blob == null) return;
           const Clipboard = window.ClipboardItem;
           // 浏览器不支持Clipboard
-          if (Clipboard == null) return canvas.toDataURL("png");
+          if (Clipboard == null) {
+            return canvas.toDataURL(
+              exportOptions.type,
+              exportOptions.quality
+            );
+          }
           const clipboardItem = new Clipboard({
             [blob.type]: blob
           });
@@ -44,11 +56,11 @@ export function saveCanvasToBase64(
             return "写入成功";
           });
         },
-        "image/png",
-        quality
+        exportOptions.type,
+        exportOptions.quality
       );
     }
-    return canvas.toDataURL("png");
+    return canvas.toDataURL(exportOptions.type, exportOptions.quality);
   }
   return "";
 }

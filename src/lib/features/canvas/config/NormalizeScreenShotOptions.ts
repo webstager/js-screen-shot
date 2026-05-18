@@ -75,6 +75,11 @@ const normalizeCaptureSource = (
       normalizedOptions.screenFlow = undefined;
       normalizedOptions.imgSrc = undefined;
       return;
+    case "snapdom":
+      normalizedOptions.enableWebRtc = false;
+      normalizedOptions.screenFlow = undefined;
+      normalizedOptions.imgSrc = undefined;
+      return;
     case "image":
       if (
         typeof capture.imageSrc !== "string" ||

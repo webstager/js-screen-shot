@@ -10,7 +10,8 @@ jest.mock("@/store/UserParamStore", () => ({
     enableWebRtc: true,
     imgSrc: null,
     screenFlow: null,
-    wrcWindowMode: false
+    wrcWindowMode: false,
+    domRenderEngine: "html2canvas"
   }
 }));
 
@@ -22,6 +23,7 @@ describe("ScreenShotModeResolver", () => {
     userParamStore.imgSrc = null;
     userParamStore.screenFlow = null;
     userParamStore.wrcWindowMode = false;
+    userParamStore.domRenderEngine = "html2canvas";
   });
 
   test("image 模式优先级最高", () => {
@@ -34,6 +36,16 @@ describe("ScreenShotModeResolver", () => {
     userParamStore.enableWebRtc = false;
     userParamStore.imgSrc = null;
     expect(resolveScreenShotMode()).toBe("html2canvas");
+  });
+
+  test("DOM 渲染引擎为 snapdom 时走 snapdom 模式", () => {
+    userParamStore.enableWebRtc = false;
+    userParamStore.domRenderEngine = "snapdom";
+    expect(resolveScreenShotMode()).toBe("snapdom");
+    expect(resolveScreenShotPlan()).toEqual({
+      captureSource: "snapdom-render",
+      renderStrategy: "browser-frame"
+    });
   });
 
   test("存在 screenFlow 时选择 injected-stream", () => {

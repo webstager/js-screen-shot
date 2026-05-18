@@ -52,6 +52,20 @@ describe("NormalizeScreenShotOptions", () => {
     expect(normalized.screenFlow).toBeUndefined();
   });
 
+  test("snapdom 模式会关闭 webrtc 并清空旧截图来源", () => {
+    const normalized = normalizeScreenShotOptions({
+      capture: {
+        source: "snapdom"
+      },
+      imgSrc: "data:image/png;base64,old",
+      screenFlow: {} as MediaStream
+    });
+
+    expect(normalized.enableWebRtc).toBe(false);
+    expect(normalized.imgSrc).toBeUndefined();
+    expect(normalized.screenFlow).toBeUndefined();
+  });
+
   test("injected-stream 模式会写入新 stream", () => {
     const stream = new MediaStream();
     const normalized = normalizeScreenShotOptions({

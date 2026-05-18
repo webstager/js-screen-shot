@@ -1,6 +1,7 @@
 export type ScreenShotCaptureSource =
   | "static-image"
   | "dom-render"
+  | "snapdom-render"
   | "browser-display-media"
   | "injected-media-stream";
 

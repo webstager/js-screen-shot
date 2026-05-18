@@ -22,6 +22,10 @@ import type { CustomCanvasElementAdapter } from "@/lib/type/components/customEle
 import type {
   HiddenScrollbarOptions,
   ImageSize,
+  CanvasExportOptions,
+  SnapDomCaptureOptions,
+  SnapDomRenderer,
+  ScreenShotCursorCapture,
   ScreenShotOptions,
   ViewportOffset
 } from "@/lib/type/components/screenshot";
@@ -124,6 +128,7 @@ export type UserParamStoreDataType = {
   destroyContainer: boolean;
   maskColor: { r: number; g: number; b: number; a: number };
   writeBase64: boolean;
+  exportOptions: Required<CanvasExportOptions>;
   cutBoxBdColor: string;
   maxUndoNum: number;
   useRatioArrow: boolean;
@@ -138,4 +143,8 @@ export type UserParamStoreDataType = {
   customElementAdapters: Array<CustomCanvasElementAdapter>;
   renderOptions: { x: number; y: number };
   canvasElements: Array<CanvasElementSnapshot>;
+  domRenderEngine: "html2canvas" | "snapdom";
+  snapdom: SnapDomRenderer | null;
+  snapdomOptions: SnapDomCaptureOptions;
+  captureCursor: ScreenShotCursorCapture;
 };

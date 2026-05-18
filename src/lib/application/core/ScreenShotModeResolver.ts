@@ -25,7 +25,14 @@ const modeResolvers: LoadModeResolver[] = [
   },
   {
     captureSource: "dom-render",
-    predicate: () => !userParamStore.enableWebRtc
+    predicate: () =>
+      !userParamStore.enableWebRtc &&
+      userParamStore.domRenderEngine === "html2canvas"
+  },
+  {
+    captureSource: "snapdom-render",
+    predicate: () =>
+      !userParamStore.enableWebRtc && userParamStore.domRenderEngine === "snapdom"
   },
   {
     captureSource: "injected-media-stream",
@@ -49,6 +56,7 @@ export const resolveScreenShotMode = (): ScreenShotMode => {
   const sourceToModeMap: Record<ScreenShotCaptureSource, ScreenShotMode> = {
     "static-image": "image",
     "dom-render": "html2canvas",
+    "snapdom-render": "snapdom",
     "injected-media-stream": "injected-stream",
     "browser-display-media": "webrtc"
   };

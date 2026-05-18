@@ -1,13 +1,26 @@
 import { getCanvas2dCtx } from "@/lib/shared/canvas/CanvasPatch";
 import userParamStore from "@/store/UserParamStore";
+import {
+  DEFAULT_CANVAS_EXPORT_QUALITY,
+  DEFAULT_CANVAS_EXPORT_TYPE
+} from "@/lib/constants/image";
+import type { CanvasExportType } from "@/lib/type/components/screenshot";
+import {
+  getCanvasExportFileExtension,
+  getCanvasExportTypeFromDataUrl,
+  normalizeCanvasExportOptions
+} from "@/lib/shared/canvas/CanvasExportOptions";
 
 export function saveCanvasToImage(
   context: CanvasRenderingContext2D,
   startX: number,
   startY: number,
   width: number,
-  height: number
+  height: number,
+  quality = DEFAULT_CANVAS_EXPORT_QUALITY,
+  type: CanvasExportType = DEFAULT_CANVAS_EXPORT_TYPE
 ) {
+  const exportOptions = normalizeCanvasExportOptions({ type, quality });
   // 获取设备像素比
   const dpr = window.devicePixelRatio || 1;
   // 获取裁剪框区域图片信息
@@ -27,11 +40,15 @@ export function saveCanvasToImage(
     imgContext.putImageData(img, 0, 0);
     const a = document.createElement("a");
     // 获取图片
-    a.href = canvas.toDataURL("png");
+    a.href = canvas.toDataURL(exportOptions.type, exportOptions.quality);
+    const dataUrlType = getCanvasExportTypeFromDataUrl(
+      a.href,
+      exportOptions.type
+    );
     // 获取用户传入的文件名
     const imgName = userParamStore.saveImgTitle || new Date().getTime();
     // 下载图片
-    a.download = `${imgName}.png`;
+    a.download = `${imgName}.${getCanvasExportFileExtension(dataUrlType)}`;
     a.click();
   }
 }

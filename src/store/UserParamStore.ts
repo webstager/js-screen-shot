@@ -7,6 +7,7 @@ import { initializeStoreState } from "@/store/utils/initializeStore";
 import { registerStoreReset } from "@/store/utils/resetRegistry";
 import { CanvasElementSnapshot } from "@/lib/type/components/canvas";
 import type { CustomCanvasElementAdapter } from "@/lib/type/components/customElement";
+import { normalizeCanvasExportOptions } from "@/lib/shared/canvas/CanvasExportOptions";
 
 class UserParamStore {
   private initialState(): UserParamStoreDataType {
@@ -41,6 +42,7 @@ class UserParamStore {
       destroyContainer: true,
       maskColor: { r: 0, g: 0, b: 0, a: 0.6 },
       writeBase64: true,
+      exportOptions: normalizeCanvasExportOptions(),
       cutBoxBdColor: "#2CABFF",
       maxUndoNum: 15,
       useRatioArrow: false,
@@ -53,8 +55,12 @@ class UserParamStore {
       saveImgTitle: null,
       canvasEvents: null,
       customElementAdapters: [],
-      renderOptions:{ x: 0, y: 0 },
-      canvasElements: []
+      renderOptions: { x: 0, y: 0 },
+      canvasElements: [],
+      domRenderEngine: "html2canvas",
+      snapdom: null,
+      snapdomOptions: {},
+      captureCursor: "never"
     };
   }
 
@@ -83,6 +89,7 @@ class UserParamStore {
   destroyContainer!: boolean;
   maskColor!: UserParamStoreDataType["maskColor"];
   writeBase64!: boolean;
+  exportOptions!: UserParamStoreDataType["exportOptions"];
   cutBoxBdColor!: string;
   maxUndoNum!: number;
   useRatioArrow!: boolean;
@@ -97,12 +104,16 @@ class UserParamStore {
   customElementAdapters!: UserParamStoreDataType["customElementAdapters"];
   renderOptions!: UserParamStoreDataType["renderOptions"];
   canvasElements!: UserParamStoreDataType["canvasElements"];
+  domRenderEngine!: UserParamStoreDataType["domRenderEngine"];
+  snapdom!: UserParamStoreDataType["snapdom"];
+  snapdomOptions!: UserParamStoreDataType["snapdomOptions"];
+  captureCursor!: UserParamStoreDataType["captureCursor"];
 
   private readonly applyInitialState: () => void;
 
   constructor() {
     this.applyInitialState = initializeStoreState(this, () => this.initialState());
-    makeAutoObservable(this, {}, { autoBind: true });
+    makeAutoObservable(this, { snapdom: false }, { autoBind: true });
     registerStoreReset(this.reset);
   }
 
@@ -221,8 +232,15 @@ class UserParamStore {
     this.writeBase64 = state;
   }
 
+  setExportOptions(options: ScreenShotOptions["exportOptions"]) {
+    this.exportOptions = normalizeCanvasExportOptions({
+      ...this.exportOptions,
+      ...options
+    });
+  }
+
   // 设置保存回调函数
-  setSaveCallback(saveFn: (code: number, msg: string,base64:string) => void) {
+  setSaveCallback(saveFn: (code: number, msg: string, base64: string) => void) {
     this.saveCallback = saveFn;
   }
 
@@ -314,6 +332,22 @@ class UserParamStore {
 
   setRenderOptions(position: UserParamStoreDataType["renderOptions"]) {
     this.renderOptions = { ...position };
+  }
+
+  setDomRenderEngine(engine: UserParamStoreDataType["domRenderEngine"]) {
+    this.domRenderEngine = engine;
+  }
+
+  setSnapDomRenderer(renderer: UserParamStoreDataType["snapdom"]) {
+    this.snapdom = renderer;
+  }
+
+  setSnapDomOptions(options: UserParamStoreDataType["snapdomOptions"]) {
+    this.snapdomOptions = { ...options };
+  }
+
+  setCaptureCursor(cursor: UserParamStoreDataType["captureCursor"]) {
+    this.captureCursor = cursor;
   }
 
   // 获取画布事件监听

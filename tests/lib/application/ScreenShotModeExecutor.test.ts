@@ -4,6 +4,7 @@ import type { ScreenShotMode } from "@/lib/application/core/ScreenShotModeResolv
 jest.mock("@/lib/application/core/ScreenSourceManager", () => ({
   loadImageSource: jest.fn(() => Promise.resolve(document.createElement("canvas"))),
   h2cScreenShot: jest.fn(() => Promise.resolve(document.createElement("canvas"))),
+  snapdomScreenShot: jest.fn(() => Promise.resolve(document.createElement("canvas"))),
   executeCaptureSource: jest.fn(() => Promise.resolve(null))
 }));
 
@@ -14,6 +15,7 @@ jest.mock("@/store/dom/domCleanup", () => ({
 import {
   loadImageSource,
   h2cScreenShot,
+  snapdomScreenShot,
   executeCaptureSource
 } from "@/lib/application/core/ScreenSourceManager";
 import { destroyScreenShotDom } from "@/store/dom/domCleanup";
@@ -63,6 +65,11 @@ describe("ScreenShotModeExecutor", () => {
   test("html2canvas 模式调用 h2cScreenShot", async () => {
     await runMode("html2canvas");
     expect(h2cScreenShot).toHaveBeenCalledTimes(1);
+  });
+
+  test("snapdom 模式调用 snapdomScreenShot", async () => {
+    await runMode("snapdom");
+    expect(snapdomScreenShot).toHaveBeenCalledTimes(1);
   });
 
   test("injected-stream 模式会转成统一 capture source plan", async () => {

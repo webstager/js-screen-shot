@@ -1,7 +1,8 @@
 import {
   executeCaptureSource,
   loadImageSource,
-  h2cScreenShot
+  h2cScreenShot,
+  snapdomScreenShot
 } from "@/lib/application/core/ScreenSourceManager";
 import { ScreenShotMode } from "@/lib/application/core/ScreenShotModeResolver";
 import { resolveRenderStrategy } from "@/lib/application/core/ScreenShotModeResolver";
@@ -35,6 +36,7 @@ const legacyModeToCaptureSourceMap: Record<
 > = {
   image: "static-image",
   html2canvas: "dom-render",
+  snapdom: "snapdom-render",
   "injected-stream": "injected-media-stream",
   webrtc: "browser-display-media"
 };
@@ -87,6 +89,7 @@ export const executeLoadPlan = (
   > = {
     "static-image": handleImageMode,
     "dom-render": handleHtml2CanvasMode,
+    "snapdom-render": handleSnapDomMode,
     "injected-media-stream": handleStreamCaptureMode,
     "browser-display-media": handleStreamCaptureMode
   };
@@ -127,6 +130,21 @@ const handleHtml2CanvasMode = (ctx: ScreenShotPlanContext) => {
   } = ctx;
   const promise = h2cScreenShot(triggerCallback, context, mouseEvents);
   pipeCanvasResult(promise, "html2canvas", {
+    setImageController,
+    cancelCallback
+  });
+};
+
+const handleSnapDomMode = (ctx: ScreenShotPlanContext) => {
+  const {
+    mouseEvents,
+    context,
+    triggerCallback,
+    setImageController,
+    cancelCallback
+  } = ctx;
+  const promise = snapdomScreenShot(triggerCallback, context, mouseEvents);
+  pipeCanvasResult(promise, "snapdom", {
     setImageController,
     cancelCallback
   });

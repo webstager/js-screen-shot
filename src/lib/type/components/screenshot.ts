@@ -36,15 +36,37 @@ export type ScreenShotCaptureSourceOption =
   | "display-media"
   | "injected-stream"
   | "dom"
+  | "snapdom"
   | "image";
 
 export type ScreenShotRenderMode = "browser-frame" | "window-frame";
 
+export type ScreenShotCursorCapture = "always" | "motion" | "never";
+
+export type SnapDomCaptureOptions = Record<string, unknown>;
+
+export type SnapDomRenderer = {
+  toCanvas: (
+    element: HTMLElement,
+    options?: SnapDomCaptureOptions
+  ) => Promise<HTMLCanvasElement>;
+};
+
 export type ScreenShotCaptureOptions = {
   source?: ScreenShotCaptureSourceOption;
   render?: ScreenShotRenderMode;
+  cursor?: ScreenShotCursorCapture;
   stream?: MediaStream;
   imageSrc?: string;
+  snapdom?: SnapDomRenderer;
+  snapdomOptions?: SnapDomCaptureOptions;
+};
+
+export type CanvasExportType = "image/png" | "image/jpeg" | "image/webp";
+
+export type CanvasExportOptions = {
+  type?: CanvasExportType;
+  quality?: number;
 };
 
 export type ScreenShotOptions = {
@@ -91,6 +113,7 @@ export type ScreenShotOptions = {
   maskColor?: { r: number; g: number; b: number; a: number };
   toolPosition?: ToolPlacement;
   writeBase64?: boolean;
+  exportOptions?: CanvasExportOptions;
   hiddenScrollBar?: HiddenScrollbarOptions;
   wrcWindowMode?: boolean;
   customRightClickEvent?: RightClickEventConfig;

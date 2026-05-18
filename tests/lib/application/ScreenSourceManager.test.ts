@@ -1,4 +1,9 @@
-import { loadImageSource, h2cScreenShot } from "@/lib/application/core/ScreenSourceManager";
+import {
+  loadImageSource,
+  h2cScreenShot,
+  resolveSnapDomRenderer,
+  snapdomScreenShot
+} from "@/lib/application/core/ScreenSourceManager";
 import screenDomStore from "@/store/dom/ScreenDomStore";
 const userParamStore = require("@/store/UserParamStore").default;
 const drawingDataStore = require("@/store/DrawingDataStore").default;
@@ -35,6 +40,9 @@ describe("ScreenSourceManager", () => {
     userParamStore.renderOptions = { x: 10, y: 20 };
     userParamStore.loadCrossImg = false;
     userParamStore.screenShotDom = null;
+    userParamStore.snapdom = null;
+    userParamStore.snapdomOptions = {};
+    delete (window as unknown as { snapdom?: unknown }).snapdom;
     drawingDataStore.dpr = 1;
     screenDomStore.screenShotController = document.createElement("canvas");
   });
@@ -75,5 +83,37 @@ describe("ScreenSourceManager", () => {
       onclone: drawCrossImg
     }));
     expect(initScreenShot).toHaveBeenCalled();
+  });
+
+  test("snapdomScreenShot 使用传入的 SnapDOM 渲染器", async () => {
+    const customDom = document.createElement("div");
+    const renderedCanvas = document.createElement("canvas");
+    const snapdom = {
+      toCanvas: jest.fn(() => Promise.resolve(renderedCanvas))
+    };
+    userParamStore.screenShotDom = customDom;
+    userParamStore.snapdom = snapdom;
+    userParamStore.snapdomOptions = { scale: 2 };
+
+    const result = await snapdomScreenShot(
+      jest.fn(),
+      {} as CanvasRenderingContext2D,
+      mouseEvents
+    );
+
+    expect(result).toBe(renderedCanvas);
+    expect(snapdom.toCanvas).toHaveBeenCalledWith(customDom, { scale: 2 });
+    expect(initScreenShot).toHaveBeenCalledWith(
+      expect.any(Function),
+      {},
+      renderedCanvas,
+      mouseEvents
+    );
+  });
+
+  test("未引入 SnapDOM 时会抛出明确错误", () => {
+    expect(() => resolveSnapDomRenderer()).toThrow(
+      'capture.source 为 "snapdom" 时，需要先引入 SnapDOM'
+    );
   });
 });

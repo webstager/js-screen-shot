@@ -22,6 +22,25 @@ const plugInApplicators: OptionApplicator<ScreenShotOptions>[] = [
     }
   },
   {
+    keys: ["capture"],
+    apply: options => {
+      if (options.capture?.source === "snapdom") {
+        userParamStore.setDomRenderEngine("snapdom");
+      } else if (options.capture?.source === "dom") {
+        userParamStore.setDomRenderEngine("html2canvas");
+      }
+      if (options.capture?.snapdom) {
+        userParamStore.setSnapDomRenderer(options.capture.snapdom);
+      }
+      if (options.capture?.snapdomOptions) {
+        userParamStore.setSnapDomOptions(options.capture.snapdomOptions);
+      }
+      if (options.capture?.cursor) {
+        userParamStore.setCaptureCursor(options.capture.cursor);
+      }
+    }
+  },
+  {
     keys: ["menuBarHeight"],
     apply: options => {
       if (typeof options.menuBarHeight === "number") {
@@ -31,8 +50,7 @@ const plugInApplicators: OptionApplicator<ScreenShotOptions>[] = [
   },
   {
     keys: ["canvasWidth", "canvasHeight"],
-    when: options =>
-      Boolean(options.canvasWidth && options.canvasHeight),
+    when: options => Boolean(options.canvasWidth && options.canvasHeight),
     apply: options => {
       userParamStore.setCanvasSize(
         options.canvasWidth as number,
@@ -61,6 +79,14 @@ const plugInApplicators: OptionApplicator<ScreenShotOptions>[] = [
     apply: options => {
       if (options.writeBase64 === false) {
         userParamStore.setWriteImgState(false);
+      }
+    }
+  },
+  {
+    keys: ["exportOptions"],
+    apply: options => {
+      if (options.exportOptions) {
+        userParamStore.setExportOptions(options.exportOptions);
       }
     }
   },
@@ -114,8 +140,7 @@ const plugInApplicators: OptionApplicator<ScreenShotOptions>[] = [
   },
   {
     keys: ["useCustomImgSize", "customImgSize"],
-    when: options =>
-      Boolean(options.useCustomImgSize && options.customImgSize),
+    when: options => Boolean(options.useCustomImgSize && options.customImgSize),
     apply: options => {
       userParamStore.setUseCustomImgSize(
         Boolean(options.useCustomImgSize),
