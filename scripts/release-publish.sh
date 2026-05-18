@@ -136,11 +136,11 @@ NODE
 echo "Updated package.json and README.md: $CURRENT_VERSION -> $RELEASE_VERSION"
 
 git add package.json README.md
-git commit -m "chore: release $RELEASE_VERSION"
+git commit -m "build: release $RELEASE_VERSION"
 git tag "$RELEASE_TAG"
 
 if [ "$AUTO_YES" -ne 1 ]; then
-  printf "Push branch '%s', push tag '%s', and run 'pnpm publish --access public' now? [y/N]: " "$CURRENT_BRANCH" "$RELEASE_TAG"
+  printf "Push branch '%s', push tag '%s', run build-rollup:prod, and publish to npm now? [y/N]: " "$CURRENT_BRANCH" "$RELEASE_TAG"
   read -r CONFIRM || CONFIRM=""
   case "$CONFIRM" in
     y|Y|yes|YES)
@@ -154,4 +154,5 @@ fi
 
 git push origin "$CURRENT_BRANCH"
 git push origin "$RELEASE_TAG"
+pnpm run build-rollup:prod
 pnpm publish --access public
